@@ -1,0 +1,230 @@
+
+```{r}
+library(plyr) #note this must be run before tidyverse!
+library(tidyverse)
+library(dslabs)
+library(gridExtra)
+```
+```{r}
+take_poll(25)
+
+```
+```{r}
+#polling red/blue from an urn, assuming independence and replacement
+p<- .51
+N<- 2500
+B<- 2000
+S.Xbar.ave <- p
+
+SE.Xbar.ave <-sqrt(p*(1-p)*N)
+SE.Xbar.ave
+
+results <- rdply(B, {
+X <- sample(c(1,0),N,replace =TRUE,prob=c(p,(1-p)))
+Xbar.ave <- sum(X)/N
+})
+hist(results$V1)
+mean(results$V1)
+sd(results$V1)           
+```
+
+```{r}
+# The vector `p` contains 100 proportions of Democrats ranging from 0 to 1 using the `seq` function
+p <- seq(0, 1, length = 100)
+
+# The vector `sample_sizes` contains the three sample sizes
+sample_sizes <- c(25, 100, 1000)
+
+# Write a for-loop that calculates the standard error `se` for every value of `p` for each of the three samples sizes `N` in the vector `sample_sizes`. Plot the three graphs, using the `ylim` argument to standardize the y-axis across all three plots.
+for(N in sample_sizes){
+se <- sqrt(p*(1-p)/N)
+plot(p,se, ylim =c(0,.1))}
+```
+```{r}
+library(gridExtra)
+names(results) <-c(.n ="draw",V1 ="x_hat")
+x_hat <-mean(results$x_hat)
+
+p1 <- results %>%
+    ggplot(aes(x_hat)) +
+    geom_histogram(binwidth = 0.005, color = "black")
+p2 <- results %>%
+    ggplot(aes(sample = x_hat)) +
+    #stat_qq(dparams = list(mean = mean(x_hat), sd = sd(x_hat))) +
+    geom_abline() +
+    ylab("X_hat") +
+    xlab("Theoretical normal")
+grid.arrange(p1, p2, nrow=1)
+```
+```{r}
+N <- 100000
+p <- seq(0.35, 0.65, length = 100)
+SE <- sapply(p, function(x) 2*sqrt(x*(1-x)/N))
+data.frame(p = p, SE = SE) %>%
+    ggplot(aes(p, SE)) +
+    geom_line()
+```
+```{r}
+
+# Define `p` as the proportion of Democrats in the population being polled
+p <- 0.45
+
+# Define `N` as the number of people polled
+N <- 100
+
+# The variable `B` specifies the number of times we want the sample to be replicated
+B <- 10000
+
+# Use the `set.seed` function to make sure your answer matches the expected result after random sampling
+set.seed(1)    
+
+take_sample <- function(p,N){
+  s<-sample(c(1,0),N,replace=TRUE, prob=c(p,1-p))
+  mean(s)
+}
+
+# Create an objected called `errors` that replicates subtracting the result of the `take_sample` function from `p` for `B` replications
+errors <- replicate(B, {
+p-take_sample(p,N)})
+mean(errors)
+mean(abs(errors))
+qqnorm(errors)
+qqline(errors)
+
+
+# Calculate the mean of the errors. Print this value to the console.
+hist(errors)
+# Calculate the mean of the ab= solute value of each simulated error. Print this value to the console.
+#sd of errors is square root of ave error squared!? 
+# Calculate the standard deviation of `errors`
+sqrt(mean(errors^2))
+
+# Use the `set.seed` function to make sure your answer matches the expected result after random sampling
+set.seed(1)
+
+# when you dont know p and approximate by generating and using X_bar
+#Define `X` as a random sample of `N` voters with a probability of picking a Democrat ('1') equal to `p`
+X <- sample(c(1,0),N,replace = TRUE,prob=c(p,1-p))
+
+# Define `X_bar` as the average sampled proportion
+X_bar <-mean(X)
+
+# Calculate the standard error of the estimate. Print the result to the console.
+SE_bar<- sqrt(X_bar*(1-X_bar)/N)
+
+# Calculate the probability that the estimated proportion of Democrats in the population is greater than 0.5. Print this value to the console. 
+#Note 1-pnorm
+1-pnorm(0.5,p,sqrt(p*(1-p)/N))
+
+#Define `se_hat` as the standard error of the sample average
+se_hat <-sqrt(X_hat*(1-X_hat)/N)
+
+# Calculate the probability that the error is 0.01 or larger
+(1- pnorm(0.01,0,se_hat))+pnorm(-0.01,0,se_hat)
+```
+```{r}
+N <- seq(100, 5000, len = 100)
+p <- 0.5
+se <- sqrt(p*(1-p)/N)
+plot(N,se)
+```
+```{r}
+data("nhtemp")
+data.frame(year = as.numeric(time(nhtemp)), temperature = as.numeric(nhtemp)) %>%
+    ggplot(aes(year, temperature)) +
+    geom_point() +
+    geom_smooth() +
+    ggtitle("Average Yearly Temperatures in New Haven")
+```
+
+```{r}
+pnorm(2)
+qnorm(0.975)
+1-pnorm(2)
+pnorm(-2)
+2*(1-pnorm(2)) # which is the same as 1-pnorm(2) rh tail + pnorm(-2) lh tail
+pnorm(3)
+qnorm(.999)
+pnorm(qnorm(.999))
+1-qnorm(.999)
+pnorm(1-qnorm(.999))
+```
+
+
+```{r}
+xx <-seq(.005,1,.01)
+yy <-qnorm(xx)
+yy.1 <-qnorm(1-xx)
+zz <-qnorm(yy) #takes you back to the orginal xx value
+zz.1 <- qnorm(yy.1)
+plot(xx,zz)
+plot(xx,zz.1)
+```
+```{r}
+#Monte Carlo estimate of the prob being in a range
+p<-.45
+N <- 2500
+B <- 10000
+inside <- replicate(B, {
+    X <- sample(c(0,1), size = N, replace = TRUE, prob = c(1-p, p))
+    X_hat <- mean(X)
+    SE_hat <- sqrt(X_hat*(1-X_hat)/N)
+    between(p, X_hat - 2*SE_hat, X_hat + 2*SE_hat)    # TRUE if p in confidence interval
+})
+mean(inside) #proportion of TRUES, ie how confident are we that p falls into that range 
+
+```
+```{r}
+# confidence interval calc for sample
+# reminder getting SE for a sample, using X_hat as an estimate for the p
+N <- 25
+X_hat <- 0.48
+(2*X_hat - 1) + c(-2, 2)*2*sqrt(X_hat*(1-X_hat)/N)  #mean-2SE to mean +2SE, using 2.  
+#for exactly 95% confidence, use qnorm(.975).  c(qnorm(1-.975), qnorm(.975))
+(2*X_hat - 1) + c(qnorm(1-.975), qnorm(.975))*2*sqrt(X_hat*(1-X_hat)/N)
+#note the interval includes 0, so that is 50% = flipping a coin.  25 is too small a sample, (so is 250).
+```
+```{r}
+#to compare results from many polls
+d <- 0.039 # actual outcome spread
+N <-1000 #sample size for random Monte Carlo test 
+Ns <- c(1298, 533, 1342, 897, 774, 254, 812, 324, 1291, 1056, 2172, 516) #sizes of 12 polls
+p <- (d+1)/2 # p is the proportion of people voting for D
+
+# calculate confidence intervals of the spread
+confidence_intervals <- sapply(Ns, function(N){
+    X <- sample(c(0,1), size=N, replace=TRUE, prob = c(1-p, p))
+    X_hat <- mean(X)
+    SE_hat <- sqrt(X_hat*(1-X_hat)/N)
+   2*c(X_hat, X_hat - 2*SE_hat, X_hat + 2*SE_hat) - 1 #calc spread (d), lower limit of d and upper limit of d = 3 values
+})
+
+X_hat
+SE_hat
+confidence_intervals
+#str(confidence_intervals)
+
+# generate a data frame storing results
+confid_polls <- data.frame(poll = 1:ncol(confidence_intervals),
+                    t(confidence_intervals), sample_size = Ns) 
+names(confid_polls) <- c("poll", "spread_estimate", "low", "high", "sample_size")
+confid_polls
+confid_polls %>% summarise(mean(spread_estimate))
+
+
+
+```
+```{r}
+# to compute the spread of combined polls, use a weighted sample (weighted by poll size)
+d_hat <- confid_polls %>%
+    summarize(avg = sum(spread_estimate*sample_size) / sum(sample_size)) %>%
+    .$avg  # d_hat = sum of all the weighted estimates
+d_hat # ie estimate of spread, spread = d
+
+p_hat <- (1+d_hat)/2 # once got d_hat, can get p = (estimate of) proportion & margin of error
+p_hat
+moe <- 2*1.96*sqrt(p_hat*(1-p_hat)/sum(confid_polls$sample_size))   
+round(d_hat*100,1)
+round(moe*100, 1)
+```
+
